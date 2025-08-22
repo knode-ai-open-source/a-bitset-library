@@ -1,6 +1,6 @@
 ## 08/22/2025
 
-**Modernize A Memory Library: build system, docs, SPDX headers, tests**
+**Modernize A Bitset Library: build system, docs, SPDX headers, tests**
 
 ## Summary
 
