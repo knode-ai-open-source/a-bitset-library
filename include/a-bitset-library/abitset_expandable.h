@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2023-2025 Andy Curtis <contactandyc@gmail.com>
-// SPDX-FileCopyrightText: 2024-2025 Knode.ai
+// SPDX-FileCopyrightText: 2023–2025 Andy Curtis <contactandyc@gmail.com>
+// SPDX-FileCopyrightText: 2024–2025 Knode.ai — technical questions: contact Andy (above)
 // SPDX-License-Identifier: Apache-2.0
 
 #ifndef _abitset_expandable_h
@@ -17,7 +17,7 @@ struct abitset_expandable_s;
 typedef struct abitset_expandable_s abitset_expandable_t;
 
 /* Initializes a new bitset */
-abitset_expandable_t * abitset_expandable_init();
+abitset_expandable_t * abitset_expandable_init(void);
 
 /* Destroys the bitset */
 void abitset_expandable_destroy(abitset_expandable_t *h);

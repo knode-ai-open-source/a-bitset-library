@@ -1,112 +1,142 @@
-# SPDX-FileCopyrightText: 2023-2025 Andy Curtis <contactandyc@gmail.com>
-# SPDX-FileCopyrightText: 2024-2025 Knode.ai
+# SPDX-FileCopyrightText: 2023–2025 Andy Curtis <contactandyc@gmail.com>
+# SPDX-FileCopyrightText: 2024–2025 Knode.ai — technical questions: contact Andy (above)
 # SPDX-License-Identifier: Apache-2.0
-cmake_minimum_required(VERSION 3.10)
 
-# Enable testing
+# CMakeLists.txt for tests
+cmake_minimum_required(VERSION 3.20)
+
+project(a_bitset_library_tests LANGUAGES C)
+
+set(A_BUILD_VARIANT "debug" CACHE STRING
+    "Variant to link via a_bitset_library::a_bitset_library (debug|memory|static|shared)")
+set_property(CACHE A_BUILD_VARIANT PROPERTY STRINGS debug memory static shared)
+
+option(A_ENABLE_COVERAGE "Enable code coverage instrumentation" OFF)
+
+find_library(M_LIB m)
+
+# ---- Test executables ----
+set(TEST_EXECUTABLES "")
+add_executable(test_bitset  src/test_bitset.c)
+
+list(APPEND TEST_EXECUTABLES test_bitset)
+
+set_target_properties(test_bitset PROPERTIES
+  C_STANDARD 17
+  C_STANDARD_REQUIRED YES
+)
+if("CXX" IN_LIST CMAKE_PROJECT_LANGUAGES)
+  set_target_properties(test_bitset PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+  )
+endif()
+
+if(NOT TARGET a_bitset_library::a_bitset_library)
+  find_package(a_bitset_library CONFIG REQUIRED)
+endif()
+target_link_libraries(test_bitset PRIVATE a_bitset_library::a_bitset_library)
+
+if(M_LIB)
+  target_link_libraries(test_bitset PRIVATE ${M_LIB})
+endif()
+
+if(MSVC)
+  target_compile_options(test_bitset PRIVATE /W4)
+else()
+  target_compile_options(test_bitset PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+if(A_ENABLE_COVERAGE)
+  if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+    target_compile_options(test_bitset PRIVATE -O0 -g -fprofile-instr-generate -fcoverage-mapping)
+    target_link_options(test_bitset PRIVATE -fprofile-instr-generate -fcoverage-mapping)
+  elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(test_bitset PRIVATE -O0 -g --coverage)
+    target_link_options(test_bitset PRIVATE --coverage)
+  endif()
+endif()
+
+add_test(NAME test_bitset COMMAND $<TARGET_FILE:test_bitset>)
+add_executable(test_bitset_expandable  src/test_bitset_expandable.c)
+
+list(APPEND TEST_EXECUTABLES test_bitset_expandable)
+
+set_target_properties(test_bitset_expandable PROPERTIES
+  C_STANDARD 17
+  C_STANDARD_REQUIRED YES
+)
+if("CXX" IN_LIST CMAKE_PROJECT_LANGUAGES)
+  set_target_properties(test_bitset_expandable PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+  )
+endif()
+
+if(NOT TARGET a_bitset_library::a_bitset_library)
+  find_package(a_bitset_library CONFIG REQUIRED)
+endif()
+target_link_libraries(test_bitset_expandable PRIVATE a_bitset_library::a_bitset_library)
+
+if(M_LIB)
+  target_link_libraries(test_bitset_expandable PRIVATE ${M_LIB})
+endif()
+
+if(MSVC)
+  target_compile_options(test_bitset_expandable PRIVATE /W4)
+else()
+  target_compile_options(test_bitset_expandable PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+if(A_ENABLE_COVERAGE)
+  if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+    target_compile_options(test_bitset_expandable PRIVATE -O0 -g -fprofile-instr-generate -fcoverage-mapping)
+    target_link_options(test_bitset_expandable PRIVATE -fprofile-instr-generate -fcoverage-mapping)
+  elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(test_bitset_expandable PRIVATE -O0 -g --coverage)
+    target_link_options(test_bitset_expandable PRIVATE --coverage)
+  endif()
+endif()
+
+add_test(NAME test_bitset_expandable COMMAND $<TARGET_FILE:test_bitset_expandable>)
+
 enable_testing()
 
-set(LIB_TO_TEST a-bitset-library)
+# ---- Coverage aggregation ----
+add_custom_target(coverage_report COMMENT "Generate coverage report")
 
-# Options
-option(USE_STATIC_LIB "Link against static library" OFF)
-option(USE_SHARED_LIB "Link against shared library" OFF)
-option(ENABLE_CODE_COVERAGE "Enable code coverage reporting" OFF)
+if(A_ENABLE_COVERAGE AND CMAKE_C_COMPILER_ID MATCHES "Clang")
+  include(ProcessorCount)
+  ProcessorCount(NPROC)
+  if(NPROC EQUAL 0)
+    set(NPROC 4)
+  endif()
 
-# Set variables
-set(TEST_SOURCES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-file(GLOB TEST_SOURCES ${TEST_SOURCES_DIR}/*.c)
+  add_custom_command(TARGET coverage_report PRE_BUILD
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -j ${NPROC}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Running tests with coverage instrumentation"
+  )
 
-# Add a library for code coverage (if required)
-if(ENABLE_CODE_COVERAGE)
-    include(CheckCXXCompilerFlag)
-    check_cxx_compiler_flag("--coverage" HAS_COVERAGE_FLAG)
-    if(HAS_COVERAGE_FLAG)
-        add_compile_options(--coverage)
-        link_libraries(--coverage)
-    else()
-        find_program(LLVM_COV_EXECUTABLE llvm-cov)
-        find_program(GCOV_EXECUTABLE gcov)
-        if(LLVM_COV_EXECUTABLE)
-            add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
-            link_libraries(-fprofile-instr-generate -fcoverage-mapping)
-        elseif(GCOV_EXECUTABLE)
-            add_compile_options(-fprofile-arcs -ftest-coverage)
-            link_libraries(-fprofile-arcs -ftest-coverage)
+  find_program(LLVM_PROFDATA_EXECUTABLE llvm-profdata)
+  find_program(LLVM_COV_EXECUTABLE llvm-cov)
+  if(LLVM_PROFDATA_EXECUTABLE AND LLVM_COV_EXECUTABLE)
+    add_custom_command(TARGET coverage_report POST_BUILD
+      COMMAND ${LLVM_PROFDATA_EXECUTABLE} merge -sparse *.profraw -o default.profdata
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      COMMENT "Merging coverage data"
+    )
 
-            # Add a custom target to generate gcov reports
-            add_custom_target(coverage
-                COMMAND ${CMAKE_COMMAND} -E make_directory coverage-report
-                COMMAND find ${CMAKE_BINARY_DIR} -name "*.gcno" -execdir ${GCOV_EXECUTABLE} -o . {} \\\; > coverage-report/coverage.txt
-                COMMAND cat coverage-report/coverage.txt
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                COMMENT "Generating code coverage report using gcov")
-
-        else()
-            message(WARNING "No suitable code coverage tool found. Code coverage is disabled.")
-            set(ENABLE_CODE_COVERAGE OFF)
-        endif()
-    endif()
-endif()
-
-# Include directories for the main library
-include_directories(${CMAKE_SOURCE_DIR}/include)
-
-find_package(a-json-library REQUIRED)
-
-# Determine which library to link against
-if(USE_STATIC_LIB)
-    set(LIB_TO_LINK ${LIB_TO_TEST}::${LIB_TO_TEST} a-json-library_static)
-elseif(USE_SHARED_LIB)
-    set(LIB_TO_LINK ${LIB_TO_TEST}::shared a-json-library_static)
-else()
-    set(LIB_TO_LINK ${LIB_TO_TEST}::debug a-json-library_debug)
-endif()
-
-# Add test executables
-foreach(TEST_SOURCE ${TEST_SOURCES})
-    # Extract test name (e.g., test_io.c -> test_io)
-    get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
-
-    # Add executable for the test
-    add_executable(${TEST_NAME} ${TEST_SOURCE})
-
-    if(USE_STATIC_LIB)
-        target_compile_options(${TEST_NAME} PRIVATE -O3)
-    else()
-        target_compile_definitions(${TEST_NAME} PUBLIC -D_AML_DEBUG_)
-        target_compile_options(${TEST_NAME} PRIVATE -g -O0)
-    endif()
-
-    # Link against the chosen library
-    target_link_libraries(${TEST_NAME} PRIVATE ${LIB_TO_LINK})
-
-
-    # Add coverage flags if enabled
-    if(ENABLE_CODE_COVERAGE)
-        target_compile_options(${TEST_NAME} PRIVATE -fprofile-arcs -ftest-coverage)
-        target_link_options(${TEST_NAME} PRIVATE -fprofile-arcs -ftest-coverage)
-    endif()
-
-    # Register the test with CTest
-    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
-endforeach()
-
-# Additional configurations for code coverage tools (e.g., gcov, lcov)
-if(ENABLE_CODE_COVERAGE)
-    find_program(LCOV_EXECUTABLE lcov)
-    find_program(GENHTML_EXECUTABLE genhtml)
-
-    if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
-        add_custom_target(coverage
-            COMMAND ${LCOV_EXECUTABLE} --capture --directory . --output-file coverage.info
-            COMMAND ${LCOV_EXECUTABLE} --remove coverage.info '/usr/*' "${CMAKE_BINARY_DIR}/*" --output-file coverage.info
-            COMMAND ${GENHTML_EXECUTABLE} coverage.info --output-directory coverage-report
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-            COMMENT "Generating code coverage report")
-    elseif(GCOV_EXECUTABLE)
-        message(STATUS "Using gcov for code coverage.")
-    else()
-        message(WARNING "lcov, genhtml, or gcov not found. Coverage report generation will be unavailable.")
-    endif()
+    # Normal compiled library path
+    add_custom_command(TARGET coverage_report POST_BUILD
+      COMMAND ${LLVM_COV_EXECUTABLE} show
+              ../liba_bitset_library_${A_BUILD_VARIANT}.a
+              -instr-profile=default.profdata
+              -format=html -output-dir=coverage_html
+              --ignore-filename-regex='/usr/.*'
+              --show-regions --show-line-counts-or-regions
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      COMMENT "Generated LLVM coverage report → open coverage_html/index.html"
+    )
+  endif()
 endif()
