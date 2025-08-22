@@ -1,12 +1,13 @@
-// SPDX-FileCopyrightText: 2023-2025 Andy Curtis <contactandyc@gmail.com>
-// SPDX-FileCopyrightText: 2024-2025 Knode.ai
+// SPDX-FileCopyrightText: 2023–2025 Andy Curtis <contactandyc@gmail.com>
+// SPDX-FileCopyrightText: 2024–2025 Knode.ai — technical questions: contact Andy (above)
 // SPDX-License-Identifier: Apache-2.0
 
 #include <stdio.h>
 #include <stdbool.h>
 #include "a-bitset-library/abitset_expandable.h"
+#include "a-memory-library/aml_alloc.h"
 
-int main() {
+int main(void) {
     // Initialize an expandable bitset
     abitset_expandable_t *bitset = abitset_expandable_init();
     printf("Initialized expandable bitset.\n");

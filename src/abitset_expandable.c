@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2023-2025 Andy Curtis <contactandyc@gmail.com>
-// SPDX-FileCopyrightText: 2024-2025 Knode.ai
+// SPDX-FileCopyrightText: 2023–2025 Andy Curtis <contactandyc@gmail.com>
+// SPDX-FileCopyrightText: 2024–2025 Knode.ai — technical questions: contact Andy (above)
 // SPDX-License-Identifier: Apache-2.0
 
 #include "a-bitset-library/abitset_expandable.h"
@@ -22,7 +22,7 @@ struct abitset_expandable_s {
 };
 
 /* Initializes a new expandable bitset. */
-abitset_expandable_t *abitset_expandable_init() {
+abitset_expandable_t *abitset_expandable_init(void) {
     abitset_expandable_t *h = (abitset_expandable_t *)aml_calloc(1, sizeof(abitset_expandable_t));
     h->pages = (_Atomic(_Atomic(uint64_t) *) *)aml_calloc(INITIAL_PAGES, sizeof(_Atomic(_Atomic(uint64_t) *)));
     atomic_store(&h->page_count, INITIAL_PAGES);
